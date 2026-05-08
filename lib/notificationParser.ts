@@ -9,24 +9,28 @@ export interface ParsedNotification {
   confidenceScore: number;
 }
 
+// Captura secuencias de dígitos con puntos y/o comas como separadores
 const AMOUNT_PATTERNS = [
-  /\$\s?([\d,]+\.?\d*)/g,
-  /por\s+\$?([\d,]+\.?\d*)/gi,
-  /de\s+\$?([\d,]+\.?\d*)/gi,
-  /([\d,]+\.?\d*)\s*COP/gi,
+  /\$\s?([\d.,]+)/g,
+  /por\s+\$?([\d.,]+)/gi,
+  /de\s+\$?([\d.,]+)/gi,
+  /([\d.,]+)\s*COP/gi,
+  /valor[:\s]+\$?\s*([\d.,]+)/gi,
+  /monto[:\s]+\$?\s*([\d.,]+)/gi,
 ];
 
 const CARD_PATTERNS = [
-  /terminad[ao]\s+en\s+(\d{4})/gi,
-  /tarjeta\s+\*+(\d{4})/gi,
-  /\*+(\d{4})/g,
+  /terminad[ao]\s+en\s+(\d{4})/i,
+  /tarjeta\s+\*+(\d{4})/i,
+  /\*+(\d{4})/,
 ];
 
+// Sin flag 'g': .exec() con 'g' mantiene lastIndex entre llamadas (bug)
 const REFERENCE_PATTERNS = [
-  /ref[.:]?\s*(\w+)/gi,
-  /referencia[:]?\s*(\w+)/gi,
-  /código[:]?\s*(\w+)/gi,
-  /No[.]?\s*(\d+)/g,
+  /ref[.:]?\s*(\w+)/i,
+  /referencia[:]?\s*(\w+)/i,
+  /código[:]?\s*(\w+)/i,
+  /No[.]?\s*(\d+)/,
 ];
 
 const TRANSACTION_KEYWORDS: { [key: string]: { type: TransactionType; keywords: string[] } } = {
@@ -98,15 +102,65 @@ export function parseNotification(title: string, body: string): ParsedNotificati
   };
 }
 
+export function parseAmountString(raw: string): number | undefined {
+  const s = raw.trim();
+  if (!s || !/\d/.test(s)) return undefined;
+
+  const dots   = (s.match(/\./g) || []).length;
+  const commas = (s.match(/,/g) || []).length;
+
+  let normalized: string;
+
+  if (dots > 0 && commas > 0) {
+    // Ambos separadores presentes → el último es el decimal
+    const lastDot   = s.lastIndexOf('.');
+    const lastComma = s.lastIndexOf(',');
+    if (lastComma > lastDot) {
+      // Formato europeo: 9.999,00 → punto=miles, coma=decimal
+      normalized = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Formato americano: 9,999.00 → coma=miles, punto=decimal
+      normalized = s.replace(/,/g, '');
+    }
+  } else if (dots > 1) {
+    // Múltiples puntos → todos son miles: 9.999.999
+    normalized = s.replace(/\./g, '');
+  } else if (commas > 1) {
+    // Múltiples comas → todas son miles: 9,999,999
+    normalized = s.replace(/,/g, '');
+  } else if (dots === 1 && commas === 0) {
+    const afterDot = s.split('.')[1] ?? '';
+    if (afterDot.length === 3) {
+      // Punto como miles: 9.999 → 9999
+      normalized = s.replace('.', '');
+    } else {
+      // Punto como decimal: 9999.50
+      normalized = s;
+    }
+  } else if (commas === 1 && dots === 0) {
+    const afterComma = s.split(',')[1] ?? '';
+    if (afterComma.length === 3) {
+      // Coma como miles: 9,999 → 9999
+      normalized = s.replace(',', '');
+    } else {
+      // Coma como decimal: 9999,50
+      normalized = s.replace(',', '.');
+    }
+  } else {
+    // Sin separadores: 9999
+    normalized = s;
+  }
+
+  const amount = parseFloat(normalized);
+  return isNaN(amount) || amount <= 0 ? undefined : amount;
+}
+
 function extractAmount(text: string): number | undefined {
   for (const pattern of AMOUNT_PATTERNS) {
     const matches = Array.from(text.matchAll(pattern));
     if (matches.length > 0) {
-      const amountStr = matches[0][1].replace(/,/g, '');
-      const amount = parseFloat(amountStr);
-      if (!isNaN(amount) && amount > 0) {
-        return amount;
-      }
+      const amount = parseAmountString(matches[0][1]);
+      if (amount !== undefined) return amount;
     }
   }
   return undefined;

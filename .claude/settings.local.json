@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Content \"c:\\\\Users\\\\MARVI\\\\OneDrive\\\\Documents\\\\GitHub\\\\AppFinanzas\\\\package.json\" | ConvertFrom-Json | Select-Object -ExpandProperty dependencies | Get-Member -Type NoteProperty | Select-Object Name | Where-Object { $_.Name -match \"sms|notification|message|expo\" } | ForEach-Object { $_.Name })"
+    ]
+  }
+}

@@ -22,7 +22,8 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0066FF"
       },
-      "package": "com.mifinanzas.app"
+      "package": "com.mifinanzas.app",
+      "permissions": ["android.permission.READ_SMS"]
     },
     "web": {
       "bundler": "metro",
@@ -34,8 +35,8 @@
       "typedRoutes": true
     },
     "extra": {
-      "EXPO_PUBLIC_SUPABASE_URL": "https://folrcgvcrpfazpnvpkqy.supabase.co",
-      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvbHJjZ3ZjcnBmYXpwbnZwa3F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMjY0NzIsImV4cCI6MjA4ODkwMjQ3Mn0.LNfezG85jhnA0Xtd2Chl3CnM94cIDYqn_5huLN-viB4"
+      "EXPO_PUBLIC_SUPABASE_URL": "https://tdrizbsbymnypqoculvk.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_uxjmTZ-xf44vcnGP74C7MQ_OXGFjhQL"
     }
   }
 }

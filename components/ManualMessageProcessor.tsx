@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from './Card';
 import { Button } from './Button';
 import { Input } from './Input';
@@ -91,7 +92,7 @@ export function ManualMessageProcessor({
 
       setEditAmount(parsedData.amount?.toString() || '');
       setEditDescription(parsedData.description || '');
-      setEditType(parsedData.suggestedType || 'expense');
+      setEditType(parsedData.suggestedType === 'income' ? 'income' : 'expense');
       setConfidenceScore(parsedData.confidenceScore);
 
       if (parsedData.amount && parsedData.description && rules.length > 0 && editAccountId) {
@@ -191,7 +192,7 @@ export function ManualMessageProcessor({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Procesar Mensaje</Text>
@@ -402,7 +403,7 @@ export function ManualMessageProcessor({
             </>
           )}
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }

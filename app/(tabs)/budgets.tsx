@@ -14,10 +14,12 @@ import {
 import { Plus, Target, TrendingUp, CircleAlert as AlertCircle, X } from 'lucide-react-native';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
+import { ErrorBox } from '@/components/ErrorBox';
 import { Input } from '@/components/Input';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/utils';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '@/constants/theme';
 
 interface Budget {
@@ -56,11 +58,13 @@ const MONTHS = [
 
 export default function GoalsScreen() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
@@ -142,16 +146,17 @@ export default function GoalsScreen() {
 
   const handleSaveBudget = async () => {
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      Alert.alert('Error', 'El monto debe ser mayor a cero');
+      setFormError('El monto debe ser mayor a cero');
       return;
     }
 
     const alertPercentage = parseInt(formData.alert_percentage);
     if (alertPercentage <= 0 || alertPercentage > 100) {
-      Alert.alert('Error', 'El porcentaje de alerta debe estar entre 1 y 100');
+      setFormError('El porcentaje de alerta debe estar entre 1 y 100');
       return;
     }
 
+    setFormError('');
     setSaving(true);
     try {
       const { error } = await supabase.from('budgets').insert({
@@ -171,7 +176,7 @@ export default function GoalsScreen() {
       resetForm();
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al crear presupuesto');
+      setFormError(error.message || 'Error al crear presupuesto');
     } finally {
       setSaving(false);
     }
@@ -344,7 +349,7 @@ export default function GoalsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Nuevo Presupuesto</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={() => { setModalVisible(false); setFormError(''); }}>
                 <X size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
@@ -420,12 +425,14 @@ export default function GoalsScreen() {
                 Recibirás una alerta cuando alcances este porcentaje
               </Text>
 
+              {formError ? <ErrorBox message={formError} /> : null}
+
               <Button
                 title="Crear Presupuesto"
                 onPress={handleSaveBudget}
                 loading={saving}
                 fullWidth
-                style={styles.saveButton}
+                style={[styles.saveButton, { marginBottom: insets.bottom + SPACING.md }]}
               />
             </ScrollView>
           </View>

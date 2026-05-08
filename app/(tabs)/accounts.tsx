@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
+import { ErrorBox } from '@/components/ErrorBox';
 import { Input } from '@/components/Input';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingState } from '@/components/LoadingState';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +26,7 @@ import type { Account } from '@/lib/types';
 
 export default function AccountsScreen() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,6 +36,7 @@ export default function AccountsScreen() {
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('');
   const [accountType, setAccountType] = useState<'checking' | 'cash' | 'credit_card' | 'savings'>('checking');
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -66,6 +70,7 @@ export default function AccountsScreen() {
   }, []);
 
   const handleOpenModal = (account?: Account) => {
+    setSaveError('');
     if (account) {
       setEditingAccount(account);
       setName(account.name);
@@ -82,9 +87,10 @@ export default function AccountsScreen() {
 
   const handleSaveAccount = async () => {
     if (!user || !name.trim()) {
-      Alert.alert('Error', 'El nombre de la cuenta es requerido');
+      setSaveError('El nombre de la cuenta es requerido');
       return;
     }
+    setSaveError('');
 
     const balanceValue = parseFloat(balance) || 0;
 
@@ -118,7 +124,7 @@ export default function AccountsScreen() {
       loadAccounts();
     } catch (error) {
       console.error('Error saving account:', error);
-      Alert.alert('Error', 'No se pudo guardar la cuenta');
+      setSaveError('No se pudo guardar la cuenta');
     }
   };
 
@@ -283,7 +289,12 @@ export default function AccountsScreen() {
               </View>
             </ScrollView>
 
-            <View style={styles.modalActions}>
+            {saveError ? (
+              <View style={{ paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm }}>
+                <ErrorBox message={saveError} />
+              </View>
+            ) : null}
+            <View style={[styles.modalActions, { paddingBottom: insets.bottom + SPACING.lg }]}>
               <Button
                 title="Cancelar"
                 onPress={() => setShowModal(false)}

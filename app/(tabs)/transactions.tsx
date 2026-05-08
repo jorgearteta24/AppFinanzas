@@ -8,14 +8,17 @@ import {
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
+import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
+import { ErrorBox } from '@/components/ErrorBox';
 import { ImportModal } from '@/components/ImportModal';
+import { SmsBankImportModal } from '@/components/SmsBankImportModal';
 import { COLORS, TYPOGRAPHY, SPACING } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/utils';
-import { Upload, Plus } from 'lucide-react-native';
+import { Upload, Plus, MessageSquare } from 'lucide-react-native';
 import type { Transaction, Category } from '@/lib/types';
 
 interface TransactionWithCategory extends Transaction {
@@ -25,12 +28,16 @@ interface TransactionWithCategory extends Transaction {
 export default function TransactionsScreen() {
   const { user } = useAuth();
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showSmsModal, setShowSmsModal] = useState(false);
   const [transactions, setTransactions] = useState<TransactionWithCategory[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const loadTransactions = useCallback(async () => {
     if (!user) return;
+    setLoadError('');
 
     try {
       const { data, error } = await supabase
@@ -45,6 +52,7 @@ export default function TransactionsScreen() {
       setTransactions(data || []);
     } catch (error) {
       console.error('Error loading transactions:', error);
+      setLoadError('No se pudieron cargar las transacciones');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -109,10 +117,12 @@ export default function TransactionsScreen() {
           </View>
         </View>
 
+        {loadError ? <ErrorBox message={loadError} /> : null}
+
         <View style={styles.buttonRow}>
           <Button
             title="Agregar"
-            onPress={() => {}}
+            onPress={() => setShowAddModal(true)}
             style={styles.button}
             icon={<Plus size={20} color={COLORS.background} />}
           />
@@ -122,6 +132,13 @@ export default function TransactionsScreen() {
             variant="outline"
             style={styles.button}
             icon={<Upload size={20} color={COLORS.primary} />}
+          />
+          <Button
+            title="SMS"
+            onPress={() => setShowSmsModal(true)}
+            variant="outline"
+            style={styles.button}
+            icon={<MessageSquare size={20} color={COLORS.primary} />}
           />
         </View>
 
@@ -179,9 +196,19 @@ export default function TransactionsScreen() {
         )}
       </ScrollView>
 
+      <AddTransactionModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={loadTransactions}
+      />
       <ImportModal
         visible={showImportModal}
         onClose={() => setShowImportModal(false)}
+        onSuccess={loadTransactions}
+      />
+      <SmsBankImportModal
+        visible={showSmsModal}
+        onClose={() => setShowSmsModal(false)}
         onSuccess={loadTransactions}
       />
     </SafeAreaView>

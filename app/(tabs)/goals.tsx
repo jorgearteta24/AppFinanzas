@@ -14,10 +14,12 @@ import {
 import { Plus, Target, X, TrendingUp, Wallet } from 'lucide-react-native';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
+import { ErrorBox } from '@/components/ErrorBox';
 import { Input } from '@/components/Input';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/utils';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '@/constants/theme';
 
 interface SavingsGoal {
@@ -52,6 +54,7 @@ const GOAL_COLORS = [
 
 export default function GoalsScreen() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +62,8 @@ export default function GoalsScreen() {
   const [contributionModal, setContributionModal] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [contributionError, setContributionError] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -113,16 +118,17 @@ export default function GoalsScreen() {
 
   const handleSaveGoal = async () => {
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'El nombre de la meta es requerido');
+      setFormError('El nombre de la meta es requerido');
       return;
     }
 
     const targetAmount = parseFloat(formData.target_amount);
     if (!targetAmount || targetAmount <= 0) {
-      Alert.alert('Error', 'El monto objetivo debe ser mayor a cero');
+      setFormError('El monto objetivo debe ser mayor a cero');
       return;
     }
 
+    setFormError('');
     setSaving(true);
     try {
       const { error } = await supabase.from('savings_goals').insert({
@@ -146,7 +152,7 @@ export default function GoalsScreen() {
       resetForm();
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al crear meta');
+      setFormError(error.message || 'Error al crear meta');
     } finally {
       setSaving(false);
     }
@@ -168,19 +174,21 @@ export default function GoalsScreen() {
 
     const amount = parseFloat(contributionData.amount);
     if (!amount || amount <= 0) {
-      Alert.alert('Error', 'El monto debe ser mayor a cero');
+      setContributionError('El monto debe ser mayor a cero');
       return;
     }
 
     if (isWithdrawal && amount > selectedGoal.current_amount) {
-      Alert.alert('Error', 'No puedes retirar más de lo que tienes ahorrado');
+      setContributionError('No puedes retirar más de lo que tienes ahorrado');
       return;
     }
 
     if (contributionData.createTransaction && !contributionData.account_id) {
-      Alert.alert('Error', 'Debes seleccionar una cuenta para crear la transacción');
+      setContributionError('Debes seleccionar una cuenta para crear la transacción');
       return;
     }
+
+    setContributionError('');
 
     setSaving(true);
     try {
@@ -255,7 +263,7 @@ export default function GoalsScreen() {
       setSelectedGoal(null);
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al procesar la operación');
+      setContributionError(error.message || 'Error al procesar la operación');
     } finally {
       setSaving(false);
     }
@@ -439,7 +447,7 @@ export default function GoalsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Nueva Meta de Ahorro</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={() => { setModalVisible(false); setFormError(''); }}>
                 <X size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
@@ -537,12 +545,14 @@ export default function GoalsScreen() {
                 ))}
               </View>
 
+              {formError ? <ErrorBox message={formError} /> : null}
+
               <Button
                 title="Crear Meta"
                 onPress={handleSaveGoal}
                 loading={saving}
                 fullWidth
-                style={styles.saveButton}
+                style={[styles.saveButton, { marginBottom: insets.bottom + SPACING.md }]}
               />
             </ScrollView>
           </View>
@@ -561,6 +571,7 @@ export default function GoalsScreen() {
                   setContributionModal(false);
                   setContributionData({ amount: '', createTransaction: false, account_id: '' });
                   setSelectedGoal(null);
+                  setContributionError('');
                 }}
               >
                 <X size={24} color={COLORS.text} />
@@ -638,12 +649,14 @@ export default function GoalsScreen() {
                 </>
               )}
 
+              {contributionError ? <ErrorBox message={contributionError} /> : null}
+
               <Button
                 title={(contributionData as any).isWithdrawal ? 'Retirar' : 'Aportar'}
                 onPress={() => handleContribution((contributionData as any).isWithdrawal)}
                 loading={saving}
                 fullWidth
-                style={styles.saveButton}
+                style={[styles.saveButton, { marginBottom: insets.bottom + SPACING.md }]}
               />
             </ScrollView>
           </View>

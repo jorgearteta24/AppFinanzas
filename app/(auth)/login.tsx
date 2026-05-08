@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/Button';
@@ -21,6 +20,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
+  const [loginError, setLoginError] = useState(''); // 👈 NUEVO
 
   const validate = () => {
     let isValid = true;
@@ -49,11 +49,22 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!validate()) return;
 
+    setLoginError(''); // 👈 limpia error anterior
     setLoading(true);
     try {
       await signIn(email, password);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al iniciar sesión');
+      // Traduce los mensajes de error de Supabase al español
+      const msg = error.message || '';
+      if (msg.includes('Invalid login credentials')) {
+        setLoginError('Correo o contraseña incorrectos');
+      } else if (msg.includes('Email not confirmed')) {
+        setLoginError('Debes confirmar tu correo antes de iniciar sesión');
+      } else if (msg.includes('Too many requests')) {
+        setLoginError('Demasiados intentos. Espera unos minutos');
+      } else {
+        setLoginError(msg || 'Error al iniciar sesión');
+      }
     } finally {
       setLoading(false);
     }
@@ -92,6 +103,13 @@ export default function LoginScreen() {
             secureTextEntry
             error={errors.password}
           />
+
+          {/* 👇 NUEVO: mensaje de error visible en pantalla */}
+          {loginError ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>⚠️ {loginError}</Text>
+            </View>
+          ) : null}
 
           <Button
             title="Iniciar Sesión"
@@ -136,10 +154,21 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.fontSize.base,
     color: COLORS.textSecondary,
   },
-  form: {
-    // gap is handled by Input's marginBottom
-  },
+  form: {},
   loginButton: {
     marginTop: SPACING.sm,
+  },
+  // 👇 NUEVO
+  errorBox: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+  },
+  errorText: {
+    color: '#B91C1C',
+    fontSize: TYPOGRAPHY.fontSize.sm,
   },
 });

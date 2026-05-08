@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/Button';
+import { ErrorBox } from '@/components/ErrorBox';
 import { Input } from '@/components/Input';
 import { useAuth } from '@/contexts/AuthContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '@/constants/theme';
@@ -28,6 +29,7 @@ export default function RegisterScreen() {
     password: '',
     confirmPassword: '',
   });
+  const [formError, setFormError] = useState('');
 
   const validate = () => {
     let isValid = true;
@@ -71,12 +73,13 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     if (!validate()) return;
 
+    setFormError('');
     setLoading(true);
     try {
       await signUp(email, password, fullName);
       Alert.alert('Éxito', 'Cuenta creada exitosamente');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al crear cuenta');
+      setFormError(error.message || 'Error al crear cuenta');
     } finally {
       setLoading(false);
     }
@@ -132,6 +135,8 @@ export default function RegisterScreen() {
             secureTextEntry
             error={errors.confirmPassword}
           />
+
+          {formError ? <ErrorBox message={formError} /> : null}
 
           <Button
             title="Crear Cuenta"
